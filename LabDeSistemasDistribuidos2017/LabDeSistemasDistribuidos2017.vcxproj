@@ -73,21 +73,25 @@
     <IncludePath>C:\Python27\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Python27\libs;$(LibraryPath)</LibraryPath>
     <TargetExt>.pyd</TargetExt>
+    <TargetName>spam</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>C:\Python27\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Python27\libs;$(LibraryPath)</LibraryPath>
     <TargetExt>.pyd</TargetExt>
+    <TargetName>spam</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <IncludePath>C:\Python27\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Python27\libs;$(LibraryPath)</LibraryPath>
     <TargetExt>.pyd</TargetExt>
+    <TargetName>spam</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>C:\Python27\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Python27\libs;$(LibraryPath)</LibraryPath>
     <TargetExt>.pyd</TargetExt>
+    <TargetName>spam</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
