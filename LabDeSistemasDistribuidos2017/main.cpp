@@ -17,7 +17,7 @@
 #endif
 
 #define ORDEM 10000
-#define N_THREADS 1
+#define N_THREADS 3
 
 std::chrono::system_clock::time_point inicio, fim;
 
@@ -45,10 +45,10 @@ std::vector<std::vector<double>> criaMatriz(unsigned int ordem)
 	omp_set_num_threads(N_THREADS);
 
 #pragma omp parallel for
-	for (int i = 0; i < ordem; ++i)
+	for (int i = 0; i < (int)ordem; ++i)
 	{
 		auto &linha = matriz[i];
-		for (int j = 0; j < ordem; ++j)
+		for (unsigned int j = 0; j < ordem; ++j)
 			linha.push_back(distribution(generator));
 	}
 	return matriz;
@@ -80,11 +80,64 @@ double somaElementosMatrizConcorrente(const std::vector<std::vector<double>> &ma
 	return soma;
 }
 
-PyObject* matrixCalc(PyObject* self, PyObject* args) {
-	int len;
-	std::vector<std::vector<double>> vect;
+PyObject* matrixCalcConcorrente(PyObject* self, PyObject* args) {
+	Py_ssize_t len;
 	PyObject* listIn;
 
+
+	PyObject* returnList;
+
+	omp_set_num_threads(N_THREADS);
+
+	if (PyArg_ParseTuple(args, "O!", &PyList_Type, &listIn)) {
+
+		len = PyList_Size(listIn);
+
+		if (len == -1)
+                return 0;
+
+        returnList = PyList_New(len);
+
+        #pragma omp parallel for
+        for (int i = 0; i < len; i++) {
+			PyObject *listInIn = PyList_GetItem(listIn, i),
+                     *returnListIn;
+
+			int lenIn = PyList_Size(listInIn);
+			//se valor atual não for uma lista, é tratado como número
+			if (lenIn == -1){
+                PyObject * py_obj_val = listInIn,
+                         *py_obj_novoVal;
+                double val = PyFloat_AsDouble(py_obj_val),
+                       valNovo = val * val;
+
+                py_obj_novoVal = PyFloat_FromDouble(valNovo);
+
+                PyList_SetItem(returnList,i,py_obj_novoVal);
+
+                continue;
+			}
+			returnListIn = PyList_New(lenIn);
+
+			for (int j = 0; j < lenIn; j++) {
+                double val = PyFloat_AsDouble(PyList_GetItem(listInIn, j)),
+                       valNovo = val * val;
+				PyList_SetItem(returnListIn,j,PyFloat_FromDouble(valNovo));
+			}
+			PyList_SetItem(returnList,i,returnListIn);
+		}
+
+        return (PyObject*)returnList;
+
+	}
+	else
+		return 0;
+}
+
+
+PyObject* matrixCalc(PyObject* self, PyObject* args) {
+	Py_ssize_t len;
+	PyObject* listIn;
 
 	PyObject* returnList;
 
@@ -92,41 +145,46 @@ PyObject* matrixCalc(PyObject* self, PyObject* args) {
 
 		len = PyList_Size(listIn);
 
-		vect = std::vector<std::vector<double>>(len);
+		if (len == -1)
+                return 0;
 
-		for (int i = 0; i < len; i++) {
-			PyObject* listInIn = PyList_GetItem(listIn, i);
-			//if (!PyArg_ParseTuple(PyList_GetItem(listIn,i), "O!", &PyList_Type, &listInIn)) return NULL;
+        returnList = PyList_New(len);
+
+        for (int i = 0; i < len; i++) {
+			PyObject *listInIn = PyList_GetItem(listIn, i),
+                     *returnListIn;
 
 			int lenIn = PyList_Size(listInIn);
-			std::vector<double> inList(lenIn);
+			//se valor atual não for uma lista, é tratado como número
+			if (lenIn == -1){
+                PyObject * py_obj_val = listInIn,
+                         *py_obj_novoVal;
+                double val = PyFloat_AsDouble(py_obj_val),
+                       valNovo = val * val;
+
+                py_obj_novoVal = PyFloat_FromDouble(valNovo);
+
+                PyList_SetItem(returnList,i,py_obj_novoVal);
+
+                continue;
+			}
+			returnListIn = PyList_New(lenIn);
+
 			for (int j = 0; j < lenIn; j++) {
-				inList[j] = PyFloat_AsDouble(PyList_GetItem(listInIn, j));
+                double val = PyFloat_AsDouble(PyList_GetItem(listInIn, j)),
+                       valNovo = val * val;
+				PyList_SetItem(returnListIn,j,PyFloat_FromDouble(valNovo));
 			}
-			vect[i] = inList;
+			PyList_SetItem(returnList,i,returnListIn);
 		}
 
-		//while (len--) {
-		//	vect[len] = PyFloat_AsDouble(PyList_GetItem(listIn, len));
-		//	vect[len] = pow(vect[len], 2);
-		//}
+        return (PyObject*)returnList;
 
-
-
-		returnList = PyList_New(vect.size());
-
-		for (int i = 0; i < vect.size(); i++) {
-			PyObject* returnListIn = PyList_New(vect[i].size());
-			for (int j = 0; j < vect[i].size(); j++) {
-				PyList_SetItem(returnListIn, j, PyFloat_FromDouble(vect[i][j]));
-			}
-			PyList_SetItem(returnList, i, returnListIn);
-		}
-		return (PyObject*)returnList;
 	}
 	else
 		return 0;
 }
+
 
 PyObject* sqrArr(PyObject* self, PyObject* args) {
 	int len;
@@ -150,7 +208,7 @@ PyObject* sqrArr(PyObject* self, PyObject* args) {
 
 		returnTuple = (PyListObject*)PyList_New(vect.size());
 
-		for (int i = 0; i < vect.size(); i++) {
+		for (unsigned int i = 0; i < vect.size(); i++) {
 			PyList_SetItem((PyObject*)returnTuple, i, PyFloat_FromDouble(vect[i]));
 		}
 		return (PyObject*)returnTuple;
@@ -202,6 +260,7 @@ PyMethodDef SpamMethods[] =
 	{
 		{"add_one", (PyCFunction)some_function, METH_VARARGS, 0},
 		{ "matrix_calc", (PyCFunction)matrixCalc, METH_VARARGS, 0 },
+		{ "matrix_calc_concorrente", (PyCFunction)matrixCalcConcorrente, METH_VARARGS, 0 },
 		{ "square_array", (PyCFunction)sqrArr , METH_VARARGS, 0 },
 		{"somaSequencial", (PyCFunction)somaMatrizSequencial, METH_VARARGS, 0},
 		{"somaConcorrente", (PyCFunction)somaMatrizConcorrente, METH_VARARGS, 0},
